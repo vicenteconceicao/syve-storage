@@ -66,6 +66,7 @@ public class S3StorageServiceImpl extends CommonResource implements StorageServi
                 .andSwitchTo(Uni.createFrom().item(Response
                         .created(URI.create(
                                 String.format("%sapi/storage/%s/%s", uriInfo.getBaseUri(), bucketName, fileName)))
+                        .header("Access-Control-Expose-Headers", "Location")                                
                         .build()))
                 .onFailure().recoverWithItem(th -> {
                     LOG.error("Error uploading file [{}]: {}", fileName, th.getMessage());
