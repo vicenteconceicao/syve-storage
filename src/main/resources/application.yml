@@ -16,5 +16,5 @@ quarkus:
         static-provider:
           access-key-id: ${AWS_ACCESS_KEY_ID}
           secret-access-key: ${AWS_SECRET_ACCESS_KEY}
-  security:
-    api-token: ${STORAGE_API_TOKEN}
+security:
+  api-token: ${STORAGE_API_TOKEN}
