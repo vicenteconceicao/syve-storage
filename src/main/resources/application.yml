@@ -10,7 +10,7 @@ quarkus:
     devservices:
       enabled: false
     aws:
-      region: us-east-1
+      region: ${AWS_REGION:eu-north-1}
       credentials:
         type: static
         static-provider:
