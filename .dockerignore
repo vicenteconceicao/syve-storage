@@ -1,5 +1,12 @@
-*
-!target/*-runner
-!target/*-runner.jar
-!target/lib/*
-!target/quarkus-app/*
+.git
+.gitignore
+.vscode
+target/
+README.md
+Dockerfile
+
+!pom.xml
+!src/
+!mvnw
+!mvnw.cmd
+!.mvn/
