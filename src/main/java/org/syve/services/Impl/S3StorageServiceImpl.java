@@ -63,11 +63,17 @@ public class S3StorageServiceImpl extends CommonResource implements StorageServi
                         buildPutRequest(bucketName, fileName, mimeType.orElse("application/octet-stream")),
                         AsyncRequestBody.fromFile(file)))
                 .onItem().ignore()
-                .andSwitchTo(Uni.createFrom().item(Response
-                        .created(URI.create(
-                                String.format("%sapi/storage/%s/%s", uriInfo.getBaseUri(), bucketName, fileName)))
-                        .header("Access-Control-Expose-Headers", "Location")                                
-                        .build()))
+                .andSwitchTo(Uni.createFrom().item(() -> {
+                    URI fileUri = uriInfo.getBaseUriBuilder()
+                            .path("storage")
+                            .path(bucketName)
+                            .path(fileName)
+                            .build();
+                    
+                    return Response.created(fileUri)
+                            .header("Access-Control-Expose-Headers", "Location")
+                            .build();
+                }))
                 .onFailure().recoverWithItem(th -> {
                     LOG.error("Error uploading file [{}]: {}", fileName, th.getMessage());
                     return Response.serverError().build();
