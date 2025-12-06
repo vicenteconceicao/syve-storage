@@ -6,6 +6,7 @@ import org.jboss.resteasy.reactive.PartType;
 import org.jboss.resteasy.reactive.RestForm;
 import org.jboss.resteasy.reactive.RestMulti;
 import org.syve.services.StorageService;
+import org.syve.utils.SecurityUtils;
 
 import io.smallrye.mutiny.Uni;
 import io.vertx.core.buffer.Buffer;
@@ -32,7 +33,9 @@ public class StorageResource {
             @PathParam("bucketName") String bucketName,
             @RestForm @PartType(MediaType.MULTIPART_FORM_DATA) File file) throws Exception {
 
-        return storageService.uploadFile(bucketName, file);
+        String validatedBucketName = SecurityUtils.validateBucketName(bucketName);
+        
+        return storageService.uploadFile(validatedBucketName, file);
     }
 
     @GET
@@ -42,7 +45,10 @@ public class StorageResource {
             @PathParam("bucketName") String bucketName,
             @PathParam("fileName") String fileName) {
 
-        return storageService.downloadFile(bucketName, fileName);
+        String validatedBucketName = SecurityUtils.validateBucketName(bucketName);
+        String validatedFileName = SecurityUtils.validateFileName(fileName);
+
+        return storageService.downloadFile(validatedBucketName, validatedFileName);
     }
 
     @GET
@@ -52,6 +58,9 @@ public class StorageResource {
             @PathParam("bucketName") String bucketName,
             @PathParam("fileName") String fileName) {
 
-        return storageService.getFile(bucketName, fileName);
+        String validatedBucketName = SecurityUtils.validateBucketName(bucketName);
+        String validatedFileName = SecurityUtils.validateFileName(fileName);
+
+        return storageService.getFile(validatedBucketName, validatedFileName);
     }
 }

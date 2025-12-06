@@ -10,6 +10,7 @@ import org.slf4j.LoggerFactory;
 import org.syve.services.StorageService;
 import org.syve.utils.CommonResource;
 import org.syve.utils.FileUtils;
+import org.syve.utils.SecurityUtils;
 
 import java.nio.ByteBuffer;
 import java.util.List;
@@ -41,6 +42,8 @@ public class S3StorageServiceImpl extends CommonResource implements StorageServi
     @Context
     UriInfo uriInfo;
 
+    private static final long MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
+
     @Override
     public Uni<Response> uploadFile(String bucketName, File file) {
 
@@ -50,13 +53,29 @@ public class S3StorageServiceImpl extends CommonResource implements StorageServi
                             .entity("File must not be empty").build());
         }
 
+        long fileSize = file.length();
+        if (!SecurityUtils.isValidFileSize(fileSize, MAX_FILE_SIZE)) {
+            LOG.warn("File size {} exceeds maximum allowed size {}", fileSize, MAX_FILE_SIZE);
+            return Uni.createFrom()
+                    .item(Response.status(413) // 413 Payload Too Large
+                            .entity("File size exceeds maximum allowed size (50MB)").build());
+        }
+
         Optional<String> mimeType = FileUtils.detectMimeType(file);
+        
+        if (mimeType.isEmpty() || !SecurityUtils.isAllowedMimeType(mimeType.get())) {
+            LOG.warn("File has disallowed MIME type: {}", mimeType.orElse("unknown"));
+            return Uni.createFrom()
+                    .item(Response.status(Response.Status.UNSUPPORTED_MEDIA_TYPE)
+                            .entity("File type not allowed").build());
+        }
+
         String fileExtension = mimeType.map(FileUtils::getExtensionFromMimeType)
                 .orElse(".dat");
 
         String fileName = UUID.randomUUID().toString() + fileExtension;
 
-        LOG.info("File [{}] received to be uploaded with MIME type [{}].", fileName, mimeType.orElse("unknown"));
+        LOG.info("File [{}] received to be uploaded with MIME type [{}].", fileName, mimeType.get());
 
         return Uni.createFrom()
                 .completionStage(() -> s3.putObject(
@@ -97,6 +116,8 @@ public class S3StorageServiceImpl extends CommonResource implements StorageServi
     }
 
     private RestMulti<Buffer> getFileResponse(String bucketName, String fileName, String dispositionType) {
+        String safeFileName = SecurityUtils.sanitizeFileNameForHeader(fileName);
+        
         return RestMulti.fromUniResponse(
                 Uni.createFrom().completionStage(() -> s3.getObject(buildGetRequest(bucketName, fileName),
                         AsyncResponseTransformer.toPublisher())),
@@ -104,7 +125,7 @@ public class S3StorageServiceImpl extends CommonResource implements StorageServi
                         .safePublisher(AdaptersToFlow.publisher((Publisher<ByteBuffer>) response))
                         .map(S3StorageServiceImpl::toBuffer),
                 response -> Map.of(
-                        "Content-Disposition", List.of(dispositionType + ";filename=" + fileName),
+                        "Content-Disposition", List.of(dispositionType + "; filename=\"" + safeFileName + "\""),
                         "Content-Type", List.of(response.response().contentType())));
     }
 }
